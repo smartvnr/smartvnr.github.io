@@ -14,6 +14,7 @@ const f3=n=>Number(n).toLocaleString('vi-VN',{minimumFractionDigits:3,maximumFra
 const delayText=sec=>sec>60?'+'+Math.ceil(sec/60)+' phút':sec< -60?'-'+Math.ceil(-sec/60)+' phút':'±0 phút';
 const delayClass=sec=>sec>60?'late':sec< -60?'early':'on';
 const STATUS={RUNNING:'Trên tuyến',APPROACHING:'Sắp tới ga',AT_STATION:'Đang dừng ga',INCIDENT:'ĐANG DỪNG DO SỰ CỐ'};
+const PHASE={ACCELERATING:'Đang tăng tốc sau ga',BRAKING:'Đang giảm tốc vào ga',CRUISING:'Chạy ổn định trên chặng',DWELL:'Dừng chờ tại ga',STOPPED:'Dừng vì sự cố'};
 const TYPES={signal:'Dừng chờ tín hiệu',technical:'Sự cố kỹ thuật đầu máy',crossing:'Sự cố tại đường ngang',obstruction:'Chướng ngại trên đường ray'};
 let engine=null,selectedKey=null,searchText='',mode='live',rate=1,virtualTime=Date.now(),realAnchor=Date.now(),focusedMap=false,latest=[],lastTick=null;
 let toastTimer=0;
@@ -102,6 +103,12 @@ function renderFeed(list){
   '<span class="diff '+delayClass(r.delaySec)+'">'+delayText(r.delaySec)+'</span></button>'
  ).join(''):'<p class="empty-message">Không tìm thấy mác tàu tại thời điểm đã chọn.</p>';
 }
+function speedTrace(r){
+ const trip=getTrip(r.tripKey),since=Math.max(trip.startMs,r.utcMs-29*MIN);
+ const samples=[];for(let i=0;i<30;i++){const at=since+(r.utcMs-since)*i/29;const rec=engine.telemetry(trip,at);samples.push(rec?.speedKmh||0)}
+ const path=samples.map((v,i)=>[13+(i/29)*370,79-clamp(v,0,100)*.63]).map((pt,i)=>(i?'L':'M')+pt[0].toFixed(1)+','+pt[1].toFixed(1)).join(' ');
+ return '<div class="speed-trace"><div class="trace-head"><strong>BIỂU ĐỒ TỐC ĐỘ GIẢ LẬP · 30 PHÚT GẦN NHẤT</strong><small>0–100 km/h</small></div><svg viewBox="0 0 400 90" aria-label="Đường vận tốc trong 30 phút mô phỏng" role="img"><path d="M13 79 H383" fill="none" stroke="#d1e5e2"/><path d="M13 47 H383" fill="none" stroke="#e7efed" stroke-dasharray="3 5"/><path d="'+path+'" fill="none" stroke="#159d88" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="trace-foot"><span>−30 phút</span><strong>'+escapeHTML(PHASE[r.phase]||r.phase)+'</strong><span>Hiện tại</span></div></div>';
+}
 function renderSelected(r){
  const box=$('selected-detail');
  if(!r){box.innerHTML='<div class="card-head"><div><span class="eyebrow">TELEMETRY STREAM</span><h2>Chuyến được theo dõi</h2></div></div><p class="empty-message">Không có dữ liệu vị trí tại thời điểm này.</p>';return}
@@ -114,11 +121,12 @@ function renderSelected(r){
  '<div class="detail-metrics">',
  '<div class="detail-metric"><span>Vận tốc mô phỏng</span><strong>'+f1(r.speedKmh)+' <small>km/h</small></strong></div>',
  '<div class="detail-metric"><span>Lý trình (HN → SG)</span><strong>'+f3(r.lineKm)+' <small>km</small></strong></div>',
- '<div class="detail-metric"><span>Khu vực đang qua</span><strong>'+escapeHTML(r.zoneName)+'</strong></div>',
+ '<div class="detail-metric"><span>Khu vực đang qua</span><strong>'+escapeHTML(r.zoneName)+'</strong><small>Ngưỡng mô hình: '+r.zoneSpeedModelKmh+' km/h</small></div>',
  '<div class="detail-metric"><span>Ga gần kế tiếp</span><strong>'+escapeHTML(r.nextStation)+'</strong></div>',
  '<div class="detail-metric"><span>ETA ga (giả lập)</span><strong>'+shortTime(r.etaNextMs)+'</strong></div>',
  '<div class="detail-metric"><span>So với giờ dự kiến</span><strong class="diff '+deltaClass+'">'+delayText(r.delaySec)+'</strong></div>',
  '</div>',
+ speedTrace(r),
  '<div class="detail-location"><strong>GPS giả lập</strong> · '+coordinates+'<br><code>'+r.lat.toFixed(6)+', '+r.lon.toFixed(6)+'</code><br>Ga trước: '+escapeHTML(r.previousStation)+' · Ga tới: '+escapeHTML(r.nextStation)+' · Còn '+f1(r.remainingKm)+' km'+(r.activeEvent?'<br><b>⚠ '+escapeHTML(r.activeEvent.label)+' · còn '+Math.ceil(r.waitRemainingSec/60)+' phút</b>':'')+'</div>',
  '<p class="detail-meta">Dữ liệu nội suy từ tọa độ 38 ga tham chiếu · sai số mô hình không xác định · accuracyM='+r.accuracyM+' chỉ là tham số giả lập, không phải độ chính xác được kiểm chứng · '+timeText(r.utcMs)+' ICT</p>'
  ];
@@ -192,7 +200,7 @@ function downloadData(format){
  const raw=engine.exportRecords({startMs:start,endMs:start+span*MIN,stepSec:step,trainId,maxRows:20000});
  const records=scope==='selected'?raw.filter(x=>x.tripKey===selectedKey):raw;
  if(!records.length){toast('Không có bản ghi trong khoảng xuất.');return}
- const header=['isoTime','tripKey','trainId','departureDay','lat','lon','accuracyM','lineKm','routeKm','speedKmh','zone','status','previousStation','nextStation','plannedNextMs','etaNextMs','delaySec','remainingKm','source','synthetic'];
+ const header=['isoTime','tripKey','trainId','departureDay','lat','lon','accuracyM','lineKm','routeKm','speedKmh','zone','zoneName','zoneSpeedModelKmh','phase','status','previousStation','nextStation','plannedNextMs','etaNextMs','delaySec','remainingKm','source','synthetic'];
  const meta={generator:'VNR Scenario Lab',synthetic:true,warning:'GIẢ LẬP / KHÔNG PHẢI GPS THẬT',scenario:engine.getOptions(),sourceSchedule:'https://giotaugiave.dsvn.vn/Default.aspx',createdAt:new Date().toISOString(),generatedRows:records.length,limit:20000};
  let body,mime,ext;
  if(format==='json'){body=JSON.stringify({metadata:meta,records},null,2);mime='application/json';ext='json'}
@@ -203,7 +211,7 @@ function downloadData(format){
   mime='text/csv;charset=utf-8';ext='csv';
  }
  const url=URL.createObjectURL(new Blob([body],{type:mime})),a=document.createElement('a');
- a.href=url;a.download='vnr-synthetic-'+engine.getOptions().scenario+'-'+engine.dayKey(start)+'.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ a.href=url;a.download='vnr-synthetic-'+engine.getOptions().scenario+'-'+window.VNRSIM.dayKey(start)+'.'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  toast('Đã xuất '+records.length.toLocaleString('vi-VN')+' bản ghi '+ext.toUpperCase()+(raw.length>=20000?' (đạt giới hạn 20.000 bản ghi).':'')+'.');
 }
 function register(){
