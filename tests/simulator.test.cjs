@@ -116,3 +116,56 @@ test('UI includes all linked resources, DOM hook IDs, synthetic labels and expor
  assert.ok(j.includes("window.VNRSIM.dayKey(start)"),'export filename uses core dayKey');
  for(const ext of ['json','ndjson','csv'])assert.ok(j.includes("downloadData('"+ext+"')"));
 });
+
+test('ETA shows no future incident before occurrence, then shifts once incident begins',()=>{
+ const sim=eng('normal'),before=sim.trip('SE1',day),leg=before.legs[2];
+ const km=(leg.from.km+leg.to.km)*.5,t=leg.departMs+3000;
+ const planned=sim.telemetry(before,t);
+ sim.inject({tripKey:before.key,km,type:'signal',durationMin:15,label:'Unexpected signal hold'});
+ const after=sim.trip('SE1',day),event=after.events[0];
+ const forecastBefore=sim.telemetry(after,t);
+ assert.equal(forecastBefore.etaNextMs,planned.etaNextMs,'future unknown incident not included in ETA');
+ const during=sim.telemetry(after,event.beginMs+5000);
+ assert.equal(during.status,'INCIDENT');
+ assert.equal(Math.round((during.etaNextMs-forecastBefore.etaNextMs)/60000),15);
+ const row=sim.forecastRows(after,event.beginMs+5000)[leg.i+1];
+ assert.equal(row.forecastMs,during.etaNextMs);
+});
+test('Browser UI initializes and exports JSON using simulated data',async()=>{
+ const vm=require('node:vm'),root=path.join(__dirname,'..');
+ const html=fs.readFileSync(path.join(root,'simulator.html'),'utf8');
+ const code=fs.readFileSync(path.join(root,'simulator-ui.js'),'utf8');
+ const ids=[...html.matchAll(/id="([^"]+)"/g)].map(x=>x[1]);
+ const el={};
+ for(const id of ids)el[id]={value:'',innerHTML:'',textContent:'',style:{},hidden:false,listeners:{},
+  addEventListener(name,cb){this.listeners[name]=cb},setAttribute(name,value){this[name]=value},
+  getAttribute(name){return this[name]},closest(){return null}};
+ const values={scenario:'normal',seed:'2026','focus-train':'SE1','play-rate':'1','delay-duration':'15',
+ 'export-range':'15','export-step':'60','export-scope':'all','search-train':''};
+ for(const k in values)el[k].value=values[k];
+ const files=[],window={VNRSIM:core,dispatchEvent(){},VNR_Sim:null},document={
+  getElementById:id=>{assert.ok(el[id],id+' missing');return el[id]},
+  createElement:()=>({click(){},set href(v){},set download(v){}}),
+  querySelector:()=>({insertAdjacentHTML(){}})
+ };
+ const sandbox={window,document,console,Date,Math,Intl,CustomEvent:class{},setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,
+  URL:{createObjectURL:obj=>{files.push(obj);return'blob:test'},revokeObjectURL(){}},
+  Blob:class{constructor(chunks){this.chunks=chunks}},
+  fetch:async()=>({ok:true,json:async()=>data})};
+ vm.runInNewContext(code,sandbox,{timeout:4000});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.ok(window.VNR_Sim,'UI init completed');
+ const first=window.VNR_Sim.snapshot();assert.ok(first.records.length>0);
+ assert.equal(first.synthetic,true);
+ el['download-json'].listeners.click();
+ assert.equal(files.length,1);
+ const text=files[0].chunks.join('');
+ const json=JSON.parse(text);
+ assert.ok(json.metadata.synthetic);
+ assert.ok(json.records.length>0);
+ assert.ok(json.records[0].gpsSynthetic);
+ el['scenario'].value='weather';el['apply-scenario'].listeners.click();
+ assert.equal(window.VNR_Sim.options().scenario,'weather');
+ el['play-rate'].listeners.change({target:{value:'60'}});
+ assert.ok(el['mode-indicator'].textContent.includes('60'));
+});
