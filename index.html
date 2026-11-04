@@ -71,9 +71,9 @@
         <div class="timeline-main">
           <div class="timeline-intro"><div class="eyebrow">DÒNG THỜI GIAN</div><div class="timeline-datetime" id="timeline-label">--</div><div class="sync-status live" id="sync-status" role="status">● ĐANG THEO GIỜ VIỆT NAM</div></div>
           <div class="timeline-center"><div class="playback-actions"><button id="step-back" class="ghost-icon" title="Lùi 30 phút" aria-label="Lùi 30 phút">⟲</button><button id="play-pause" class="play-button" title="Phát mô phỏng" aria-label="Phát mô phỏng">▶</button><button id="step-forward" class="ghost-icon" title="Tiến 30 phút" aria-label="Tiến 30 phút">⟳</button></div><div class="timeline-track"><div class="tick-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><input id="time-slider" type="range" min="0" max="1439" step="1" value="720" aria-label="Điều chỉnh thời điểm xem tàu"><div class="timeline-ticks"><i></i><i></i><i></i><i></i><i></i></div></div></div>
-          <div class="timeline-settings"><label class="date-wrap">Ngày<input id="date-input" type="date"></label><button class="now-button active" id="jump-now" aria-pressed="true">● Đang trực tiếp</button><select id="play-speed" aria-label="Tốc độ mô phỏng"><option value="60">60×</option><option value="300" selected>300×</option><option value="900">900×</option></select></div>
+          <div class="timeline-settings"><label class="date-wrap">Ngày<input id="date-input" type="date"></label><button class="now-button active" id="jump-now" aria-pressed="true">● Đang trực tiếp</button><select id="play-speed" aria-label="Tốc độ mô phỏng, 1 lần tương ứng đồng hồ hiện tại" title="1× = giờ hiện tại (UTC+7); 60×, 300×, 900× = tua nhanh"><option value="1" selected>1× · Giờ hiện tại</option><option value="60">60×</option><option value="300">300×</option><option value="900">900×</option></select></div>
         </div>
-        <div class="timeline-disclaimer"><span>◆ MÔ PHỎNG THEO LỊCH</span><span>Đồng hồ UTC+7 tự cập nhật mỗi giây. Giả định các tàu chạy hằng ngày theo lịch công bố; không có GPS hay dữ liệu hủy/chậm tàu.</span><a href="https://giotaugiave.dsvn.vn/Default.aspx" target="_blank" rel="noreferrer">Đối chiếu giờ tàu chính thức ↗</a></div>
+        <div class="timeline-disclaimer"><span>◆ MÔ PHỎNG THEO LỊCH</span><span>1× đồng bộ đồng hồ Việt Nam mỗi giây; 60×–900× dùng để tua nhanh. Đây là vị trí ước tính theo lịch chạy giả định hằng ngày, không phải GPS hay trạng thái chạy tàu thực tế.</span><a href="https://giotaugiave.dsvn.vn/Default.aspx" target="_blank" rel="noreferrer">Đối chiếu giờ tàu chính thức ↗</a></div>
       </div>
     </section>
     <aside class="details" id="details" aria-label="Thông tin đoàn tàu" hidden></aside>
@@ -98,7 +98,7 @@
   const shapeData=window.MAP_COUNTRIES;
   const $=id=>document.getElementById(id);
   const DAY=86400000,MIN=60000,TZ=7*60*MIN;
-  const state={time:Date.now(),mode:'live',direction:'all',query:'',from:'',to:'',selected:null,follow:false,showStations:true,showLines:true,showBranches:true,playing:false,speed:300,zoom:1,panX:0,panY:0,near:null};
+  const state={time:Date.now(),mode:'live',direction:'all',query:'',from:'',to:'',selected:null,follow:false,showStations:true,showLines:true,showBranches:true,playing:false,speed:1,zoom:1,panX:0,panY:0,near:null};
   const byId=Object.fromEntries(stations.map(s=>[s.id,s]));
   const important=['Hà Nội','Nam Định','Vinh','Đồng Hới','Huế','Đà Nẵng','Quảng Ngãi','Diêu Trì','Nha Trang','Tháp Chàm','Bình Thuận','Sài Gòn'];
   const trainMap=Object.fromEntries(trains.map(t=>[t.id,t]));
@@ -212,16 +212,16 @@
   function renderTimeline(){
     $('timeline-label').textContent=fullDate(state.time)+' · '+timeText(state.time)+(state.mode==='live'?':'+pad(new Date(state.time+TZ).getUTCSeconds()):'');
     const live=state.mode==='live';
-    $('sync-status').textContent=live?'● ĐANG THEO GIỜ VIỆT NAM':state.mode==='replay'?'▶ ĐANG TUA NHANH '+state.speed+'×':'◌ ĐANG XEM THỜI ĐIỂM TÙY CHỌN';
+    $('sync-status').textContent=live?'● 1× · THEO GIỜ VIỆT NAM':state.mode==='replay'?'▶ ĐANG TUA NHANH '+state.speed+'×':'◌ ĐANG XEM THỜI ĐIỂM TÙY CHỌN';
     $('sync-status').classList.toggle('live',live);
     $('jump-now').classList.toggle('active',live);
     $('jump-now').textContent=live?'● Đang trực tiếp':'◉ Về hiện tại';
     $('jump-now').setAttribute('aria-pressed',String(live));
-    $('map-mode-status').textContent=live?'● Đang đồng bộ với đồng hồ ICT':state.mode==='replay'?'▶ Tua nhanh theo lịch':'◌ Xem lại theo lịch';
+    $('map-mode-status').textContent=live?'● 1× · Đồng bộ theo giờ Việt Nam':state.mode==='replay'?'▶ Tua nhanh theo lịch':'◌ Xem lại theo lịch';
     $('time-slider').value=localMinutes(state.time);
     $('date-input').value=dayKey(state.time);
-    $('play-pause').textContent=state.mode==='replay'?'Ⅱ':'▶';
-    $('play-pause').title=state.mode==='replay'?'Tạm dừng tua nhanh':'Tua nhanh từ thời điểm đang xem';
+    $('play-pause').textContent=state.mode==='paused'?'▶':'Ⅱ';
+    $('play-pause').title=state.mode==='live'?'Tạm dừng mô phỏng 1×':state.mode==='replay'?'Tạm dừng tua nhanh':'Phát theo tốc độ đang chọn';
     $('play-pause').setAttribute('aria-label',$('play-pause').title);
     $('play-speed').value=String(state.speed);
   }
@@ -249,9 +249,9 @@
     $('time-slider').addEventListener('input',e=>setTime(dayStart(dayKey(state.time))+Number(e.target.value)*MIN));
     $('date-input').addEventListener('change',e=>{if(e.target.value)setTime(dayStart(e.target.value)+localMinutes(state.time)*MIN)});
     $('step-back').addEventListener('click',()=>setTime(state.time-30*MIN));$('step-forward').addEventListener('click',()=>setTime(state.time+30*MIN));
-    $('jump-now').addEventListener('click',()=>{setTime(Date.now(),'live');const q=new URL(location.href);q.searchParams.delete('time');history.replaceState({},'',q);toast('Đang cập nhật liên tục theo giờ Việt Nam. Vị trí vẫn là ước tính theo lịch.')});
-    $('play-pause').addEventListener('click',()=>{state.mode=state.mode==='replay'?'paused':'replay';state.playing=state.mode==='replay';render()});
-    $('play-speed').addEventListener('change',e=>{state.speed=Number(e.target.value);renderTimeline()});
+    $('jump-now').addEventListener('click',()=>{state.speed=1;setTime(Date.now(),'live');const q=new URL(location.href);q.searchParams.delete('time');history.replaceState({},'',q);toast('Đang chạy 1× theo đồng hồ Việt Nam. Vị trí tàu vẫn là ước tính theo lịch.')});
+    $('play-pause').addEventListener('click',()=>{if(state.mode!=='paused'){setTime(state.time,'paused')}else if(state.speed===1){setTime(Date.now(),'live');const q=new URL(location.href);q.searchParams.delete('time');history.replaceState({},'',q)}else setTime(state.time,'replay')});
+    $('play-speed').addEventListener('change',e=>{state.speed=Number(e.target.value);if(state.speed===1){setTime(Date.now(),'live');const q=new URL(location.href);q.searchParams.delete('time');history.replaceState({},'',q);toast('1×: Đồng bộ thời gian hiện tại tại Việt Nam (UTC+7). Vị trí tàu là ước tính theo lịch.')}else{setTime(state.time,'replay')}});
     $('download-csv').addEventListener('click',downloadCSV);
     const modal=$('about-modal');$('open-about').addEventListener('click',()=>{modal.hidden=false});$('close-about').addEventListener('click',()=>{modal.hidden=true});$('accept-about').addEventListener('click',()=>{modal.hidden=true});modal.addEventListener('click',e=>{if(e.target===modal)modal.hidden=true});document.addEventListener('keydown',e=>{if(e.key==='Escape'){modal.hidden=true;tooltip.hidden=true}});
     let pointer=null,suppressClick=false;
