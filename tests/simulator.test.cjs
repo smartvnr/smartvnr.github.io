@@ -94,7 +94,10 @@ test('Batch generator can export rows every 10 seconds and enforces row count ca
  const sim=eng(),trip=sim.trip('SE7',day);
  const rows=sim.exportRecords({startMs:trip.startMs+1000,endMs:trip.startMs+300000,stepSec:10,trainId:'SE7',maxRows:12});
  assert.equal(rows.length,12);assert.ok(rows.every(r=>r.synthetic&&r.trainId==='SE7'));
- assert.equal(rows[1].utcMs-rows[0].utcMs,10000);
+ const timestamps=[...new Set(rows.map(r=>r.utcMs))];
+ assert.ok(timestamps.length>=2,'at least two sample times');
+ assert.equal(timestamps[1]-timestamps[0],10000,'sample interval is measured between unique timestamps');
+ assert.ok(rows.some(r=>r.departureDay!==rows[0].departureDay),'same train designation may represent multiple departure days');
 });
 test('UI includes all linked resources, DOM hook IDs, synthetic labels and export controls',()=>{
  const root=path.join(__dirname,'..');
