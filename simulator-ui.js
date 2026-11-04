@@ -134,11 +134,11 @@ function renderSelected(r){
 }
 function renderSchedule(r,trip,t){
  if(!r||!trip){$('schedule-rows').innerHTML='<tr><td colspan="4">Chưa có dữ liệu chuyến tàu</td></tr>';return}
- const future=trip.stationRows.filter(row=>row.actualMs>=t-2*MIN).slice(0,10);
+ const future=engine.forecastRows(trip,t).filter(row=>row.forecastMs>=t-2*MIN).slice(0,10);
  $('schedule-rows').innerHTML=future.length?future.map((row,i)=>{
-  const delay=Math.round((row.actualMs-row.scheduledMs)/1000),status=delayClass(delay);
+  const delay=row.forecastDeltaSec,status=delayClass(delay);
   return '<tr class="'+(i===0?'next-row':'')+'"><td>'+escapeHTML(row.name)+'</td><td>'+shortTime(row.scheduledMs)+'<small class="minor">'+shortDate(row.scheduledMs)+'</small></td>'+
-    '<td>'+shortTime(row.actualMs)+'<small class="minor">'+shortDate(row.actualMs)+'</small></td><td class="diff '+status+'">'+delayText(delay)+'</td></tr>';
+    '<td>'+shortTime(row.forecastMs)+'<small class="minor">'+shortDate(row.forecastMs)+(row.observed?' · Đã qua':' · ETA')+'</small></td><td class="diff '+status+'">'+delayText(delay)+'</td></tr>';
  }).join(''):'<tr><td colspan="4">Hành trình kết thúc theo kịch bản.</td></tr>';
 }
 function renderEvents(list,r,trip,t){
