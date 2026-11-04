@@ -106,8 +106,19 @@ function create(data,initial){
     const sc=scenario();
     const zonePenalty=(profile.counts.urban/profile.x.length)*(1/sc.urban-1)+(profile.counts.rural/profile.x.length)*(1/sc.rural-1)*.7;
     let factor=1+(r-.5)*2*sc.noise+zonePenalty;
-    if(config.scenario==='recovery')factor-=.065;
-    const movingSeconds=Math.max((b.km-a.km)/88*3600,secScheduled*factor);
+    if(config.scenario==='recovery')factor-=.015;
+    let movingSeconds=Math.max((b.km-a.km)/88*3600,secScheduled*factor);
+    // Synthetic illustrative category caps (urban 65, residential 75, rural 90 km/h);
+    // NOT authoritative route speed limits. Increase segment travel time if needed.
+    let minSecondsForCaps=0;
+    for(let j=1;j<profile.x.length;j++){
+      const middleKm=a.km+(b.km-a.km)*(profile.x[j-1]+profile.x[j])/2;
+      const cap=({urban:65,residential:75,rural:90})[zoneAt(train,middleKm)];
+      const dx=(profile.x[j]-profile.x[j-1])*profile.distance;
+      const share=(profile.w[j]-profile.w[j-1])/profile.total;
+      minSecondsForCaps=Math.max(minSecondsForCaps,dx*3600/(share*cap));
+    }
+    movingSeconds=Math.max(movingSeconds,minSecondsForCaps);
     const pending=overrides.filter(e=>e.tripKey===key&&e.km>a.km&&e.km<=b.km).map(e=>Object.assign({},e));
     if(config.scenario==='incident'&&trainId===config.focusTrain&&a.km<totalKm*.52&&b.km>=totalKm*.52){
       pending.push({type:'signal',label:'Dừng chờ tín hiệu (kịch bản)',km:totalKm*.52,durationSec:28*60,tripKey:key,kind:'preset'});
@@ -167,12 +178,15 @@ function create(data,initial){
   const delaySec=Math.round((etaMs-scheduledMs)/1000);
   const deltaLabel=delaySec>60?'Trễ '+Math.ceil(delaySec/60)+' phút':delaySec< -60?'Sớm '+Math.ceil(-delaySec/60)+' phút':'Đúng giờ (±1 phút)';
   const remainingKm=Math.max(0,leg.to.km-routeKm);
+  const fromKm=Math.max(0,routeKm-leg.from.km);
+  const phase=status==='AT_STATION'?'DWELL':status==='INCIDENT'?'STOPPED':remainingKm<=5?'BRAKING':fromKm<4?'ACCELERATING':'CRUISING';
+  const zoneSpeedModelKmh=({urban:65,residential:75,rural:90})[zone];
   return{
     synthetic:true,source:'SYNTHETIC_SCHEDULE_MODEL',gpsSynthetic:true,positionQuality:'INTERPOLATED_STATION_REFERENCE',
     tripKey:trip.key,trainId:trip.trainId,departureDay:trip.departureDay,utcMs:t,isoTime:new Date(t).toISOString(),
     lat:+pt.lat.toFixed(6),lon:+pt.lon.toFixed(6),accuracyM:150,
     lineKm:+northKm.toFixed(4),routeKm:+routeKm.toFixed(4),speedKmh:+speedKmh.toFixed(2),direction:trip.train.direction,
-    zone,zoneName:zoneVN(zone),status,activeEvent:activeEvent?{type:activeEvent.type,label:activeEvent.label,finishMs:activeEvent.finishMs}:null,
+    zone,zoneName:zoneVN(zone),zoneSpeedModelKmh,phase,status,activeEvent:activeEvent?{type:activeEvent.type,label:activeEvent.label,finishMs:activeEvent.finishMs}:null,
     previousStation:d.byId[leg.from.station].name,nextStation:d.byId[leg.to.station].name,
     plannedNextMs:scheduledMs,etaNextMs:etaMs,delaySec,deltaLabel,remainingKm:+remainingKm.toFixed(3),
     nextStationId:leg.to.station,etaFinalMs:trip.endMs,plannedFinalMs:trip.stationRows.at(-1).scheduledMs,
