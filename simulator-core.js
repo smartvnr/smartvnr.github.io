@@ -149,6 +149,16 @@ function create(data,initial){
   const deltaKm=(p.x[idx]-p.x[idx-1])*p.distance,dt=leg.movingSeconds*(p.w[idx]-p.w[idx-1])/p.total;
   return deltaKm*3600/(dt||1);
  }
+ function forecastRows(trip,t){
+  // Future incidents are hidden from the ETA estimator until they happen.
+  // The generated actual timestamp remains available for after-action replay.
+  let futureHoldMs=0;
+  return trip.stationRows.map((row,i)=>{
+   if(i>0){for(const hold of trip.legs[i-1].holds){if(hold.beginMs>t)futureHoldMs+=hold.durationSec*1000}}
+   const forecastMs=row.actualMs-futureHoldMs;
+   return Object.assign({},row,{forecastMs,forecastDeltaSec:Math.round((forecastMs-row.scheduledMs)/1000),observed:row.actualMs<=t});
+  });
+ }
  function telemetry(trip,t){
   if(!Number.isFinite(t))throw Error('Invalid timestamp');
   if(t<trip.startMs||t>=trip.endMs)return null;
@@ -173,7 +183,8 @@ function create(data,initial){
   }
   const northKm=normNorth(trip.train,routeKm),pt=routePoint(northKm,d.stations);
   const zone=zoneAt(trip.train,routeKm);
-  const etaMs=leg.arrivalMs;
+  const forecast=forecastRows(trip,t);
+  const etaMs=forecast[leg.i+1].forecastMs;
   const scheduledMs=leg.scheduledToMs;
   const delaySec=Math.round((etaMs-scheduledMs)/1000);
   const deltaLabel=delaySec>60?'Trễ '+Math.ceil(delaySec/60)+' phút':delaySec< -60?'Sớm '+Math.ceil(-delaySec/60)+' phút':'Đúng giờ (±1 phút)';
@@ -189,7 +200,7 @@ function create(data,initial){
     zone,zoneName:zoneVN(zone),zoneSpeedModelKmh,phase,status,activeEvent:activeEvent?{type:activeEvent.type,label:activeEvent.label,finishMs:activeEvent.finishMs}:null,
     previousStation:d.byId[leg.from.station].name,nextStation:d.byId[leg.to.station].name,
     plannedNextMs:scheduledMs,etaNextMs:etaMs,delaySec,deltaLabel,remainingKm:+remainingKm.toFixed(3),
-    nextStationId:leg.to.station,etaFinalMs:trip.endMs,plannedFinalMs:trip.stationRows.at(-1).scheduledMs,
+    nextStationId:leg.to.station,etaFinalMs:forecast.at(-1).forecastMs,plannedFinalMs:trip.stationRows.at(-1).scheduledMs,
     waitRemainingSec:status==='INCIDENT'?Math.ceil((activeEvent.finishMs-t)/1000):status==='AT_STATION'?Math.ceil((leg.departMs-t)/1000):0
   };
  }
@@ -220,7 +231,7 @@ function create(data,initial){
   }
   return out;
  }
- return{SCENARIOS,dayKey,dayStart,routePoint,zoneAt,getOptions:()=>Object.assign({},config),setOptions,trip:build,telemetry,servicesAt,inject,clearIncidents,exportRecords,getStations:()=>d.stations,getTrains:()=>d.trains,getManualIncidents:()=>overrides.slice(),getModeLabel:()=>scenario().name};
+ return{SCENARIOS,dayKey,dayStart,routePoint,zoneAt,getOptions:()=>Object.assign({},config),setOptions,trip:build,telemetry,forecastRows,servicesAt,inject,clearIncidents,exportRecords,getStations:()=>d.stations,getTrains:()=>d.trains,getManualIncidents:()=>overrides.slice(),getModeLabel:()=>scenario().name};
 }
 return{create,SCENARIOS,dayKey,dayStart,routePoint,zoneVN};
 });
