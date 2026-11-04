@@ -37,7 +37,8 @@ Trang chạy ở **chế độ theo thời gian hiện tại** ngay khi mở, đ
 
 - **● Đang trực tiếp**: tự cập nhật mỗi giây, không cần bấm phát; nếu chuyển tab rồi quay lại, thời gian được đồng bộ lại với đồng hồ thật.
 - **Thanh thời gian / ngày**: chuyển sang chế độ xem một thời điểm tùy chọn; lùi/tiến từng 30 phút.
-- **▶ Tua nhanh**: mô phỏng 60× / 300× / 900×; bấm lần nữa để tạm dừng.
+- **1× · Giờ hiện tại** (mặc định): chọn trực tiếp trong hộp tốc độ để đồng bộ đồng hồ Việt Nam, vị trí theo lịch được tính lại mỗi giây.
+- **60× / 300× / 900×**: chọn để bắt đầu tua nhanh từ thời điểm đang hiển thị; có thể tạm dừng và tiếp tục bằng nút phát/tạm dừng.
 - **◉ Về hiện tại**: quay lại theo thời gian thực ở Việt Nam.
 - Các đoàn cùng mác tàu nhưng xuất phát ở hai ngày khác nhau được quản lý theo **ngày khởi hành**; các mốc `+1`, `+2` tính đúng qua ngày.
 
