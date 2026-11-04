@@ -23,6 +23,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+      - name: Set up Node.js for simulator checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test GPS and ETA scenario generator
+        run: node --test tests/simulator.test.cjs
+      - name: Smoke test telemetry CLI output
+        run: |
+          node scripts/generate-telemetry.cjs --train SE1 --date 2026-11-04 --minutes 2 --step 10 --format json > /tmp/vnr-telemetry.json
+          node -e "const j=require('/tmp/vnr-telemetry.json'); if(!j.records.length||!j.records[0].synthetic)process.exit(1);"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact
