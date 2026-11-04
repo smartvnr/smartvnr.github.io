@@ -30,3 +30,15 @@ Bản đồ SVG Việt Nam, 38 ga tham chiếu, 10 mác tàu Thống Nhất, l�
 Repository hiện được tạo ở chế độ **private**. Nếu tổ chức sử dụng GitHub Free, cần chuyển repository sang **public** tại **Settings → General → Danger Zone → Change repository visibility**. Nếu tổ chức có gói GitHub hỗ trợ GitHub Pages từ repository private, có thể giữ private; website Pages vẫn có thể công khai nếu cấu hình cho phép.
 
 Tiếp theo: **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: main → Folder: /(root) → Save**. Kiểm tra trạng thái build trong **Actions** và **Pages**.
+
+## Mô phỏng theo đồng hồ Việt Nam (nâng cấp 04/11/2026)
+
+Trang chạy ở **chế độ theo thời gian hiện tại** ngay khi mở, đồng bộ UTC+7 mỗi giây. Đoàn tàu tự xuất hiện khi đến giờ khởi hành theo bảng công khai và ẩn sau giờ kết thúc theo lịch. Tọa độ được nội suy giữa các ga tham chiếu từ mốc giờ qua/đi ga và lý trình.
+
+- **● Đang trực tiếp**: tự cập nhật mỗi giây, không cần bấm phát; nếu chuyển tab rồi quay lại, thời gian được đồng bộ lại với đồng hồ thật.
+- **Thanh thời gian / ngày**: chuyển sang chế độ xem một thời điểm tùy chọn; lùi/tiến từng 30 phút.
+- **▶ Tua nhanh**: mô phỏng 60× / 300× / 900×; bấm lần nữa để tạm dừng.
+- **◉ Về hiện tại**: quay lại theo thời gian thực ở Việt Nam.
+- Các đoàn cùng mác tàu nhưng xuất phát ở hai ngày khác nhau được quản lý theo **ngày khởi hành**; các mốc `+1`, `+2` tính đúng qua ngày.
+
+**Quan trọng:** "Trực tiếp" chỉ có nghĩa là đồng bộ với đồng hồ Việt Nam; **không phải GPS trực tiếp hay xác nhận tàu thực đang vận hành**. Các tàu được giả định chạy mỗi ngày theo lịch tham khảo, không tính tàu tăng cường, tàu bị hủy, dừng chờ, đổi giờ hoặc chậm giờ. Bảng nguồn công khai chủ yếu cung cấp giờ đi/qua ga, không đủ để tái hiện chính xác thời gian dừng tàu. Nguồn: https://giotaugiave.dsvn.vn/giotau/thongnhat và https://giotaugiave.dsvn.vn/Default.aspx.
