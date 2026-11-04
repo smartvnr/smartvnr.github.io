@@ -169,7 +169,7 @@ function render(){
  const r=all.find(x=>x.tripKey===selectedKey)||null,trip=getTrip(selectedKey);
  renderKPIs(all);renderMap(all,r);renderFeed(all);renderSelected(r);renderSchedule(r,trip,t);renderEvents(all,r,trip,t);fillClock(t);
  $('at-time').value=new Date(t+TZ).toISOString().slice(0,16);
- try{window.dispatchEvent(new CustomEvent('vnr-synthetic-telemetry',{detail:{simulated:true,utcMs:t,records:all}}))}catch(e){}
+ try{window.dispatchEvent(new CustomEvent('vnr-synthetic-telemetry',{detail:{synthetic:true,simulated:true,utcMs:t,records:all}}))}catch(e){}
  window.VNR_SimLastSnapshot={synthetic:true,utcMs:t,records:all};
 }
 function selectTrain(k){selectedKey=k;render()}
@@ -250,7 +250,7 @@ async function init(){
  $('focus-train').value='SE1';
  register();render();setInterval(()=>{if(mode!=='paused')render();else fillClock(nowSim())},1000);
  window.VNR_Sim={
-  snapshot:()=>({simulated:true,utcMs:nowSim(),records:engine.servicesAt(nowSim())}),
+  snapshot:()=>({synthetic:true,simulated:true,utcMs:nowSim(),records:engine.servicesAt(nowSim())}),
   options:()=>engine.getOptions(),setScenario:options=>{engine.clearIncidents();engine.setOptions(options);render()},
   incident:args=>{const event=engine.inject(args);render();return event},clear:()=>{engine.clearIncidents();render()},
   exportRecords:args=>engine.exportRecords(args),trip:(id,date)=>engine.trip(id,date),engine:()=>engine
