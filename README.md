@@ -53,12 +53,13 @@ Trang chạy ở **chế độ theo thời gian hiện tại** ngay khi mở, đ
 - [data/rail-schedules.json](./data/rail-schedules.json): 38 ga, 10 mác tàu, 239 đoạn giữa các mốc qua/đi ga
 - [scripts/generate-telemetry.cjs](./scripts/generate-telemetry.cjs): chương trình tạo luồng JSON/CSV/NDJSON cho ứng dụng bên ngoài
 - [tests/simulator.test.cjs](./tests/simulator.test.cjs): kiểm thử dữ liệu, tọa độ, ETA, sự cố và khả năng tái lập
+- [examples/se1-signal-stop.synthetic.ndjson](./examples/se1-signal-stop.synthetic.ndjson): bộ mẫu 81 bản ghi GPS giả lập, 30 giây/lần, có dừng tín hiệu 12 phút và độ trễ ETA tăng khi sự cố bắt đầu
 
 ### Kịch bản và trạng thái
 
 Giao diện hỗ trợ 5 kịch bản: `normal` (thường), `urban` (giảm tốc gần đô thị/khu dân cư), `weather` (mưa lớn), `incident` (dừng chờ tín hiệu), `recovery` (chạy bù giờ). Có thể chọn mã ngẫu nhiên (seed) để tái tạo cùng kết quả.
 
-Tàu có các pha `ACCELERATING`, `CRUISING`, `BRAKING`, `DWELL`, `STOPPED`; các trạng thái `RUNNING`, `APPROACHING`, `AT_STATION`, `INCIDENT`. Sự cố thủ công được chèn ngay tại vị trí chuyến đã chọn và làm tăng ETA các ga phía sau. Bảng giờ kế hoạch **không bị sửa**.
+Tàu có các pha `ACCELERATING`, `CRUISING`, `BRAKING`, `DWELL`, `STOPPED`; các trạng thái `RUNNING`, `APPROACHING`, `AT_STATION`, `INCIDENT`. Sự cố thủ công được chèn ngay tại vị trí chuyến đã chọn và làm tăng ETA các ga phía sau. Bảng giờ kế hoạch **không bị sửa**. Bộ dự báo ETA không biết trước sự cố tương lai: độ trễ do sự cố chỉ được đưa vào dự báo từ thời điểm sự cố bắt đầu. Nhật ký sự kiện kịch bản có thể hiển thị tình huống được lên trước phục vụ huấn luyện.
 
 **Thông số tốc độ chỉ để thử nghiệm mô hình**, không phải quy định về tốc độ chạy tàu:
 - Đô thị (`urban`): tối đa mô hình 65 km/h
