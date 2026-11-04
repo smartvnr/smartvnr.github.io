@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c2431">
+<meta name="description" content="VNR Scenario Lab — Bộ sinh dữ liệu GPS, tốc độ, ETA và tình huống vận hành đường sắt giả lập; không phải dữ liệu GPS thật.">
+<title>VNR Scenario Lab — Mô phỏng vận hành đường sắt Việt Nam</title>
+<link rel="stylesheet" href="./simulator.css">
+<script src="./simulator-core.js" defer></script>
+<script src="./simulator-ui.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+<header class="topbar">
+  <a class="brand" href="./index.html" aria-label="Vietnam Rail Map">
+    <span class="brand-icon">V</span><span><b>VIETNAM RAIL MAP</b><small>SCENARIO LAB <span class="beta">BETA</span></small></span>
+  </a>
+  <div class="top-actions"><span class="synthetic-pill"><span class="pulse-dot"></span> DỮ LIỆU GIẢ LẬP</span><span class="time-now" id="clock-ict">--:--:-- ICT</span><a href="./index.html" class="back-link">↗ Bản đồ chính</a></div>
+</header>
+<div class="workspace">
+<aside class="controls">
+  <div class="section-brow"><span class="eyebrow">PHÒNG ĐIỀU HÀNH GIẢ LẬP</span><strong>Mô phỏng mọi tình huống.</strong><p>Tạo luồng GPS, tốc độ, ETA và cảnh báo từ lịch tàu Thống Nhất tham chiếu.</p></div>
+  <div class="control-group">
+    <div class="group-head"><span>01</span><h2>Kịch bản vận hành</h2></div>
+    <label class="form-label" for="scenario">Tình huống giả định</label>
+    <select id="scenario"><option value="normal">Vận hành thông thường</option><option value="urban">Giảm tốc khu đô thị / dân cư</option><option value="weather">Mưa lớn, hạn chế tốc độ</option><option value="incident">Dừng chờ tín hiệu trên tuyến</option><option value="recovery">Chạy bù giờ sau chậm tàu</option></select>
+    <div class="two-inputs"><label class="form-label" for="seed">Mã tái lập dữ liệu <input type="number" id="seed" min="1" max="999999999" value="2026"></label><label class="form-label" for="focus-train">Mác tàu có sự cố <select id="focus-train"></select></label></div>
+    <button id="apply-scenario" class="btn btn-primary full">↻ Áp dụng kịch bản</button>
+    <div class="hint">Cùng mã seed + lịch trình + kịch bản sẽ tái tạo cùng kết quả.</div>
+  </div>
+  <div class="control-group">
+    <div class="group-head"><span>02</span><h2>Điều khiển đồng hồ</h2></div>
+    <div class="two-inputs"><label class="form-label" for="play-rate">Tốc độ mô phỏng<select id="play-rate"><option value="1">1× — theo giờ ICT</option><option value="60">60× — tua nhanh</option><option value="300">300× — tua nhanh</option><option value="900">900× — tua nhanh</option></select></label><label class="form-label" for="at-time">Chọn thời điểm<input type="datetime-local" id="at-time" step="60"></label></div>
+    <div class="button-row"><button id="run-live" class="btn btn-outline">◎ Hiện tại</button><button id="pause-run" class="btn btn-outline">Ⅱ Tạm dừng</button><button id="step-5" class="btn btn-outline">+5 phút</button></div>
+    <div class="hint" id="playback-state">Đang đồng bộ với thời gian thực Việt Nam.</div>
+  </div>
+  <div class="control-group incident-group">
+    <div class="group-head"><span>03</span><h2>Chèn sự cố ngay</h2></div>
+    <label class="form-label" for="incident-type">Tình huống tại vị trí đang chạy<select id="incident-type"><option value="signal">Dừng chờ tín hiệu</option><option value="technical">Sự cố kỹ thuật đầu máy</option><option value="crossing">Sự cố tại đường ngang</option><option value="obstruction">Chướng ngại trên đường ray</option></select></label>
+    <label class="form-label" for="delay-duration">Thời gian dừng giả định: <output id="duration-display">15 phút</output><input type="range" min="2" max="90" step="1" value="15" id="delay-duration"></label>
+    <button id="inject-incident" class="btn btn-warn full">⚠ Phát sinh sự cố ở tàu đã chọn</button>
+    <button id="clear-incidents" class="btn btn-quiet full">Xóa các sự cố chèn thủ công</button>
+    <div class="hint">Sự cố tác động vào thời gian đến ga về sau, không chỉnh sửa giờ kế hoạch.</div>
+  </div>
+  <div class="control-group export-group">
+    <div class="group-head"><span>04</span><h2>Sinh và xuất dữ liệu</h2></div>
+    <div class="two-inputs"><label class="form-label" for="export-range">Khoảng xuất<select id="export-range"><option value="15">15 phút</option><option value="60" selected>60 phút</option><option value="180">3 giờ</option><option value="1440">24 giờ</option></select></label><label class="form-label" for="export-step">Tần suất bản ghi<select id="export-step"><option value="1">1 giây</option><option value="10">10 giây</option><option value="30">30 giây</option><option value="60" selected>1 phút</option><option value="300">5 phút</option></select></label></div>
+    <label class="form-label" for="export-scope">Đối tượng<select id="export-scope"><option value="selected">Chuyến tàu đang chọn</option><option value="all">Tất cả chuyến trong thời điểm</option></select></label>
+    <div class="button-row"><button id="download-json" class="btn btn-export">↓ JSON</button><button id="download-csv" class="btn btn-export">↓ CSV</button><button id="download-ndjson" class="btn btn-export">↓ NDJSON</button></div>
+    <div class="hint">Dữ liệu có cờ <code>synthetic: true</code>; giới hạn 20.000 bản ghi/lần xuất.</div>
+  </div>
+  <div class="warning"><strong>⚠ Dữ liệu chỉ dành cho mô phỏng</strong><p>Không kết nối GPS thật, không phải dữ liệu điều độ và không được dùng để ra quyết định an toàn chạy tàu. Tốc độ theo vùng là quy tắc giả định, không phải tốc độ giới hạn pháp lý.</p></div>
+</aside>
+<main class="main">
+  <section class="summary">
+    <div class="summary-head"><div><div class="eyebrow">NETWORK DIGITAL TWIN · MÔ PHỎNG</div><h1>Trung tâm vận hành đường sắt</h1><p>Đồng hồ và tình huống của từng chuyến được tính liên tục từ lịch trình, mô hình tốc độ và sự cố giả định.</p></div><div class="live-badge"><i></i><span id="mode-indicator">1× · ICT</span></div></div>
+    <div class="kpis">
+      <div class="kpi"><span>Chuyến đang mô phỏng</span><strong id="kpi-active">--</strong><small>Không phải tàu GPS xác nhận</small></div>
+      <div class="kpi"><span>ETA trễ trên 5 phút</span><strong id="kpi-delayed">--</strong><small>So với giờ ga công bố</small></div>
+      <div class="kpi"><span>Trong tình huống sự cố</span><strong id="kpi-incident">--</strong><small>Có thể dừng mô phỏng</small></div>
+      <div class="kpi"><span>Chênh ETA bình quân</span><strong id="kpi-delta">--</strong><small>Phút / ga kế tiếp</small></div>
+    </div>
+  </section>
+  <section class="network">
+    <div class="section-heading"><div><span class="eyebrow">GIÁM SÁT ĐỊA LÝ</span><h2>Hành lang đường sắt Bắc – Nam</h2></div><div class="section-hint">● Tọa độ nội suy qua ga tham chiếu, không phải bản đồ đường ray đo đạc</div></div>
+    <div class="map-and-feed">
+      <div class="map-panel">
+        <svg id="sim-map" viewBox="0 0 1000 740" role="img" aria-label="Bản đồ mô phỏng hành lang tuyến và các tàu GPS giả lập"></svg>
+        <div class="map-legend"><span><i class="dot teal"></i> Bắc → Nam</span><span><i class="dot blue"></i> Nam → Bắc</span><span><i class="dot orange"></i> Đang chọn</span></div>
+        <div class="map-watermark">SYNTHETIC GPS · NOT LIVE TRACKING</div>
+        <button id="follow-map" class="map-follow" title="Chọn chuyến đang theo dõi">◎ Theo dõi tàu</button>
+      </div>
+      <div class="feed-panel">
+        <div class="feed-head"><h3>Danh sách đoàn tàu</h3><span id="feed-count">--</span></div>
+        <label class="search-wrap" for="search-train"><span>⌕</span><input id="search-train" placeholder="Tìm mác tàu..." autocomplete="off"></label>
+        <div id="train-feed" class="train-feed" role="list"></div>
+      </div>
+    </div>
+  </section>
+  <section class="detail-grid">
+    <div class="detail-card" id="selected-detail"><div class="card-head"><div><span class="eyebrow">TELEMETRY STREAM</span><h2>Chuyến được theo dõi</h2></div><span class="small-tag">GPS GIẢ LẬP</span></div><div class="loading">Đang đọc biểu đồ tàu...</div></div>
+    <div class="detail-card schedule-card"><div class="card-head"><div><span class="eyebrow">ETA ENGINE</span><h2>Dự báo qua ga</h2></div><span class="small-tag">KẾ HOẠCH / MÔ PHỎNG</span></div><div class="table-wrap"><table><thead><tr><th>Ga</th><th>Lịch</th><th>Dự kiến giả lập</th><th>Chênh</th></tr></thead><tbody id="schedule-rows"><tr><td colspan="4">Chưa chọn chuyến tàu</td></tr></tbody></table></div></div>
+  </section>
+  <section class="detail-card event-card">
+    <div class="card-head"><div><span class="eyebrow">EVENT & ALERT CENTER</span><h2>Sự kiện và cảnh báo theo kịch bản</h2></div><span class="small-tag" id="event-count">0 sự kiện</span></div>
+    <div id="event-list" class="event-list"><span class="empty-message">Chưa có sự kiện.</span></div>
+  </section>
+  <footer class="footer"><span>VNR Scenario Lab · Dữ liệu giả lập do người dùng điều khiển · Beta 2026</span><a href="https://giotaugiave.dsvn.vn/Default.aspx" target="_blank" rel="noopener noreferrer">Nguồn lịch tham chiếu: Đường sắt Việt Nam ↗</a></footer>
+</main>
+</div>
+</div>
+<div id="toast" class="toast" aria-live="polite" hidden></div>
+</body>
+</html>
